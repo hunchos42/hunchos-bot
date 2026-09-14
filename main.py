@@ -1,43 +1,36 @@
-from flask import Flask
-import threading, asyncio, requests
+import os
+import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-MPESA_NUMBER = "0181052018"
-BOT_TOKEN = "8915658393:AAE5El4_evv7aPk4RciLUE-2TX75KZtpMVw"
+# Token inatoka Render, sio hapa - secure!
+TOKEN = os.environ.get("TOKEN")
+MY_PROFIT = 1.5
 
-app_flask = Flask(__name__)
-@app_flask.route('/')
-def home(): return "Hunchos Bot LIVE 24/7!"
-
-async def get_price():
+def get_binance_price():
     try:
-        r = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=USDTKES", timeout=5).json()
+        r = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=USDTKES", timeout=10).json()
         return float(r['price'])
-    except: return 131.5
+    except:
+        return 129.5
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hunchos LIVE 24/7!\n/price - bei\n/buy - nunua")
+    await update.message.reply_text("🔥 Hunchos P2P LIVE!\n\n/price - bei ya leo\n/buy - kununua")
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    p = await get_price()
-    await update.message.reply_text(f"Binance: {p} KES\nYangu: {p+1} KES")
+    binance = get_binance_price()
+    yangu = binance + MY_PROFIT
+    await update.message.reply_text(f"💰 Bei leo:\nBinance: {binance:.2f} KES\nYangu: {yangu:.2f} KES\nFaida: {MY_PROFIT}")
 
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Tuma KES kwa M-Pesa: {MPESA_NUMBER}\nKisha tuma USDT address")
+    await update.message.reply_text("Nunua:\n1. Tuma KES M-Pesa: 07XX...\n2. Tuma USDT address\n3. Nikutumie haraka!")
 
-async def run_bot():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("price", price))
-    app.add_handler(CommandHandler("buy", buy))
-    await app.initialize(); await app.start()
-    await app.updater.start_polling()
-    print("Bot LIVE...")
-    await asyncio.Event().wait()
+# Muhimu kwa Render
+print("Bot ina-start...")
 
-def start_bot(): asyncio.run(run_bot())
+app = Application.builder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("price", price))
+app.add_handler(CommandHandler("buy", buy))
 
-if __name__ == "__main__":
-    threading.Thread(target=start_bot).start()
-    app_flask.run(host="0.0.0.0", port=10000)
+app.run_polling()
