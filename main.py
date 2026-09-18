@@ -1,62 +1,73 @@
 import os, requests, random, datetime, threading
 from flask import Flask
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+FOOTBALL_KEY = os.getenv("FOOTBALL_API_KEY")
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bet Masta 10 Games Live!"
+    return "Bet Masta Level 2 Live!"
+
+def get_real_fixtures():
+    if FOOTBALL_KEY and FOOTBALL_KEY!= "12345" and FOOTBALL_KEY!= "demo":
+        try:
+            today = datetime.date.today().isoformat()
+            url = f"https://v3.football.api-sports.io/fixtures?date={today}"
+            headers = {"x-apisports-key": FOOTBALL_KEY}
+            r = requests.get(url, headers=headers, timeout=15).json()
+            fixtures = r.get("response", [])[:12]
+            if fixtures:
+                games = []
+                for f in fixtures:
+                    home = f['teams']['home']['name']
+                    away = f['teams']['away']['name']
+                    games.append(f"{home} vs {away}")
+                return games
+        except Exception as e:
+            print(f"API error: {e}")
+
+    return [
+        "Man City vs Arsenal", "Real Madrid vs Espanyol", "Bayern Munich vs Dortmund",
+        "Inter Milan vs AC Milan", "PSG vs Marseille", "Liverpool vs Chelsea",
+        "Barcelona vs Getafe", "Juventus vs Napoli", "Simba SC vs Yanga SC",
+        "Al Ahly vs Zamalek", "Atletico Madrid vs Real Sociedad", "Ajax vs PSV",
+        "Porto vs Benfica", "Galatasaray vs Fenerbahce", "Man Utd vs Tottenham"
+    ]
 
 def get_predictions(count):
-    games = [
-        "Man City vs Arsenal", "Real Madrid vs Barcelona", "Bayern vs Dortmund",
-        "PSG vs Lyon", "Liverpool vs Chelsea", "Inter vs AC Milan",
-        "Simba vs Yanga", "Al Ahly vs Zamalek", "Man Utd vs Tottenham",
-        "Juventus vs Roma", "Atletico vs Sevilla", "Ajax vs PSV",
-        "Porto vs Benfica", "Celtic vs Rangers", "Galatasaray vs Fenerbahce"
-    ]
+    games = get_real_fixtures()
     random.shuffle(games)
-    tips = ["Over 1.5 Goals", "Over 0.5 HT", "Double Chance 1X", "Under 4.5 Goals"]
-    today = datetime.date.today().strftime("%b %d")
-    msg = f"⚽ BET MASTA TOP {count} ⚽\n📅 {today}\n\n"
-    for i in range(count):
-        conf = random.randint(75, 88)
-        msg += f"{i+1}. {games[i]}\n 👉 {random.choice(tips)} ✅ {conf}%\n\n"
-    return msg + "⚠️ Play responsibly"
+    tips_pool = [
+        ("Over 1.5 Goals", "Attack kali pande zote"),
+        ("Over 0.5 HT", "Magoli mapema"),
+        ("Double Chance 1X", "Mwenyeji hatapoteza"),
+        ("Double Chance X2", "Mgeni hatapoteza"),
+        ("Under 4.5 Goals", "Game ya kiufundi"),
+        ("BTTS No", "Defense imara"),
+    ]
+    today = datetime.date.today().strftime("%b %d, %Y")
+    msg = f"⚽ *BET MASTA TOP {count}* ⚽\n📅 {today}\n\n"
+    for i in range(min(count, len(games))):
+        tip, reason = random.choice(tips_pool)
+        conf = random.randint(76, 91)
+        odd = round(random.uniform(1.35, 1.85), 2)
+        msg += f"{i+1}. *{games[i]}*\n"
+        msg += f" 👉 {tip} | Odd: {odd} ✅ {conf}%\n"
+        msg += f" _{reason}_\n\n"
+    msg += "⚠️ _Play responsibly 18+_"
+    return msg
+
+def main_menu():
+    keyboard = [
+        [InlineKeyboardButton("🔥 5 Games Bora", callback_data="p5"),
+         InlineKeyboardButton("💎 10 Games Leo", callback_data="p10")],
+        [InlineKeyboardButton("💰 BTC Price", callback_data="price")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔥 Karibu Bet Masta!\n/predict5 - 5 games\n/predict10 - 10 games")
-
-async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", timeout=10).json()
-        await update.message.reply_text(f"BTC: ${r['bitcoin']['usd']}")
-    except:
-        await update.message.reply_text("Try again")
-
-async def p5(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(get_predictions(5))
-
-async def p10(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(get_predictions(10))
-
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-
-if __name__ == "__main__":
-    # Flask in background
-    threading.Thread(target=run_flask, daemon=True).start()
-    # Bot in MAIN thread - hii ndio fix
-    application = Application.builder().token(BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("price", price))
-    application.add_handler(CommandHandler("predict5", p5))
-    application.add_handler(CommandHandler("predict10", p10))
-    application.add_handler(CommandHandler("predict", p10))
-    application.add_handler(CommandHandler("today", p10))
-    print("BOT POLLING STARTED - 10 games ready")
-    application.run_polling(drop_pending_updates=True)
+    await update.message.reply_text(
+        "🔥 *BET MASTA
