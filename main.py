@@ -70,4 +70,51 @@ def main_menu():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🔥 *BET MASTA
+        "🔥 *BET MASTA LEVEL 2* 🔥\n\nKaribu! Bonyeza chini kuchagua:",
+        reply_markup=main_menu(),
+        parse_mode="Markdown"
+    )
+
+async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if query.data == "p5":
+        await query.message.reply_text(get_predictions(5), parse_mode="Markdown", reply_markup=main_menu())
+    elif query.data == "p10":
+        await query.message.reply_text(get_predictions(10), parse_mode="Markdown", reply_markup=main_menu())
+    elif query.data == "price":
+        try:
+            r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", timeout=10).json()
+            await query.message.reply_text(f"BTC: ${r['bitcoin']['usd']}", reply_markup=main_menu())
+        except:
+            await query.message.reply_text("Try again later")
+
+async def p5_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(get_predictions(5), parse_mode="Markdown", reply_markup=main_menu())
+
+async def p10_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(get_predictions(10), parse_mode="Markdown", reply_markup=main_menu())
+
+async def price_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", timeout=10).json()
+        await update.message.reply_text(f"BTC: ${r['bitcoin']['usd']}", reply_markup=main_menu())
+    except:
+        await update.message.reply_text("Error")
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    threading.Thread(target=run_flask, daemon=True).start()
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("predict5", p5_cmd))
+    application.add_handler(CommandHandler("predict10", p10_cmd))
+    application.add_handler(CommandHandler("predict", p10_cmd))
+    application.add_handler(CommandHandler("today", p10_cmd))
+    application.add_handler(CommandHandler("price", price_cmd))
+    application.add_handler(CallbackQueryHandler(button_click))
+    print("LEVEL 2 BOT STARTED")
+    application.run_polling(drop_pending_updates=True)
