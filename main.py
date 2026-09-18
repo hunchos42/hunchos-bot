@@ -1,4 +1,19 @@
+from flask import Flask
+from threading import Thread
 import os, requests, random
+from datetime import datetime
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
+
+flask_app = Flask(__name__)
+@flask_app.route('/')
+def home():
+    return "Hunchos Bot Live!"
+def run_web():
+    flask_app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+Thread(target=run_web, daemon=True).start()
+
+TOKEN = os.environ.get("BOT_TOKEN")
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
